@@ -29,6 +29,12 @@ param(
     [switch]$ReportOnly
 )
 
+# Also honour an environment variable so RMMs can set ReportOnly=true/1/yes
+# without needing to pass a script parameter.
+if (-not $ReportOnly -and $env:ReportOnly -in @('true','1','yes')) {
+    $ReportOnly = $true
+}
+
 $ErrorActionPreference = 'Stop'
 $script:Failed = $false
 
