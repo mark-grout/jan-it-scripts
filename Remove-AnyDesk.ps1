@@ -44,7 +44,7 @@ function Write-Log {
 # Report-only mode: detect and exit without making any changes
 # ---------------------------------------------------------------------------
 if ($ReportOnly) {
-    Write-Log "Running in report-only mode — no changes will be made."
+    Write-Log "Running in report-only mode - no changes will be made."
     $detected = $false
 
     $uninstallPaths = @(
@@ -139,7 +139,7 @@ $entries = $uninstallPaths | ForEach-Object {
 
 if ($entries) {
     foreach ($entry in $entries) {
-        Write-Log "Found: $($entry.DisplayName) — $($entry.UninstallString)"
+        Write-Log "Found: $($entry.DisplayName) - $($entry.UninstallString)"
         $uninstStr = $entry.UninstallString
 
         if ([string]::IsNullOrWhiteSpace($uninstStr)) {
@@ -160,7 +160,7 @@ if ($entries) {
                     }
                 }
             } else {
-                # EXE-based uninstaller — AnyDesk supports --remove --silent
+                # EXE-based uninstaller - AnyDesk supports --remove --silent
                 $exePath = $uninstStr -replace '"', '' -replace ' --.*$', ''
                 if (Test-Path $exePath) {
                     Write-Log "Running: `"$exePath`" --remove --silent"
