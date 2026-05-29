@@ -1,7 +1,8 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Removes all installations of AnyDesk from a Windows PC.
+    Removes all installations of AnyDesk from a Windows PC, or reports whether
+    it is installed.
 .DESCRIPTION
     Detects and removes AnyDesk whether it was installed system-wide (MSI/EXE
     installer) or as a portable/user-level instance. Stops the service and
@@ -9,13 +10,24 @@
     deletes the portable installation directory. Cleans up leftover files,
     registry keys, and the Windows service.
 
-    Exit codes
+    Use -ReportOnly to detect without making any changes.
+
+    Exit codes (removal mode)
         0  - AnyDesk was found and removed successfully (or was already absent)
         1  - One or more removal steps failed; check the log for details
+
+    Exit codes (-ReportOnly mode)
+        0  - AnyDesk is NOT installed / no traces found
+        1  - AnyDesk IS installed or traces were detected
+.PARAMETER ReportOnly
+    Detect AnyDesk and report findings without removing anything.
+    Exit 1 if any installation or trace is found, exit 0 if clean.
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [switch]$ReportOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $script:Failed = $false
@@ -26,6 +38,64 @@ function Write-Log {
     $line = "[$ts][$Level] $Message"
     Write-Output $line
     if ($Level -eq 'ERROR') { $script:Failed = $true }
+}
+
+# ---------------------------------------------------------------------------
+# Report-only mode: detect and exit without making any changes
+# ---------------------------------------------------------------------------
+if ($ReportOnly) {
+    Write-Log "Running in report-only mode — no changes will be made."
+    $detected = $false
+
+    $uninstallPaths = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+        'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    )
+    $regEntries = $uninstallPaths | ForEach-Object {
+        Get-ItemProperty $_ -ErrorAction SilentlyContinue
+    } | Where-Object { $_.DisplayName -like '*AnyDesk*' }
+
+    foreach ($e in $regEntries) {
+        Write-Log "DETECTED registered install: $($e.DisplayName) v$($e.DisplayVersion) [$($e.UninstallString)]"
+        $detected = $true
+    }
+
+    $svc = Get-Service -Name 'AnyDesk' -ErrorAction SilentlyContinue
+    if ($svc) {
+        Write-Log "DETECTED service: AnyDesk (Status: $($svc.Status))"
+        $detected = $true
+    }
+
+    $procs = Get-Process -Name 'AnyDesk' -ErrorAction SilentlyContinue
+    foreach ($p in $procs) {
+        Write-Log "DETECTED running process: AnyDesk (PID $($p.Id), Path: $($p.Path))"
+        $detected = $true
+    }
+
+    $filePaths = @(
+        "$env:ProgramFiles\AnyDesk",
+        "${env:ProgramFiles(x86)}\AnyDesk",
+        "$env:APPDATA\AnyDesk",
+        "$env:ProgramData\AnyDesk",
+        "$env:ProgramData\AnyDesk.exe",
+        "$env:PUBLIC\Desktop\AnyDesk.exe",
+        "$env:SystemDrive\AnyDesk.exe"
+    )
+    foreach ($p in $filePaths) {
+        if (Test-Path $p) {
+            Write-Log "DETECTED file/directory: $p"
+            $detected = $true
+        }
+    }
+
+    if ($detected) {
+        Write-Log "Result: AnyDesk installation or traces FOUND."
+        exit 1
+    } else {
+        Write-Log "Result: AnyDesk NOT detected."
+        exit 0
+    }
 }
 
 # ---------------------------------------------------------------------------
