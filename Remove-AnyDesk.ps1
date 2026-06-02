@@ -35,7 +35,8 @@ $validReportOnlyValues = @('true', '1', 'yes')
 if ($env:ReportOnly) {
     if ($env:ReportOnly -in $validReportOnlyValues) {
         $ReportOnly = $true
-    } elseif (-not $ReportOnly) {
+    } else {
+        # If it exists but IS NOT in the valid array, throw the error immediately
         Write-Error "Invalid value for environment variable ReportOnly: '$($env:ReportOnly)'. Accepted values: $($validReportOnlyValues -join ', ')."
         exit 2
     }
