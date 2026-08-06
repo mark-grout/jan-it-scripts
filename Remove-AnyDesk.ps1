@@ -53,6 +53,10 @@ function Write-Log {
     if ($Level -eq 'ERROR') { $script:Failed = $true }
 }
 
+# Log the resolved mode (parameter or ReportOnly env var) so RMM output
+# always shows which mode actually ran.
+Write-Log "Report-only mode: $ReportOnly"
+
 # ---------------------------------------------------------------------------
 # Report-only mode: detect and exit without making any changes
 # ---------------------------------------------------------------------------
